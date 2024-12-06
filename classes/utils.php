@@ -1,6 +1,7 @@
 <?php
 
-class Utils {
+class Utils 
+{
     public static function leave() 
     {
         header('Location: ..');

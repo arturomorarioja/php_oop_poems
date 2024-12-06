@@ -1,94 +1,91 @@
-'use strict';
+/**
+ * December 2024 - Original JQuery code translated to vanilla 
+ *      JavaScript by ChatGPT-4o, then amended manually
+ */
+import { API_BASE_URL } from './info.js';
+import { createElement } from './utils.js';
 
-$(function() {
-    const API = 'api/index.php';
-
-    // Initial poets load
-    $.ajax({
-        url: API,
-        type: 'GET',
-        data: {
-            entity: 'catalog',
-            information: 'authors'
-        },
-        success: function(data) {            
-            JSON.parse(data).forEach(author => $('#cmbPoets').append($('<option>', {text: author})));
-            $('#cmbPoets').trigger('change');
-        }
+/**
+ *  Initial poets load
+ */
+fetch(`${API_BASE_URL}?entity=catalog&information=authors`)
+.then(response => response.json())
+.then(data => {
+    const cmbPoets = document.getElementById('cmbPoets');
+    data.forEach(author => {
+        const option = createElement('option', { text: author });
+        cmbPoets.appendChild(option);
     });
-
-    // Poet selection
-    $('#cmbPoets').on('change', function() {
-        // Load of poet information
-        $.ajax({
-            url: API,
-            type: 'GET',
-            data: {
-                entity: 'author',
-                information: 'info',
-                name: $('#cmbPoets > option:selected').text()
-            },
-            success: function(data) {
-                const info = JSON.parse(data);
-                let dates = `${info.birthPlace}, ${info.birthDate}`;
-                if (info.deathDate !== undefined) {
-                    dates += `- ${info.deathPlace}, ${info.deathDate}`;
-                }
-                $('#poetInfo').text(dates);
-            }
-        });
-        
-        // Load of poet's list of poems
-        $.ajax({
-            url: API,
-            type: 'GET',
-            data: {
-                entity: 'author',
-                information: 'poems',
-                name: $('#cmbPoets > option:selected').text()
-            },
-            success: function(data) {
-                $('#poems').empty();
-                JSON.parse(data).forEach(function(poemTitle) {
-                    let poem = $('<article>');
-                    poem.append($('<h3>', {text: poemTitle, class: 'closedPoem'}));
-                    poem.find('h3').bind('click', poemHandler);
-
-                    $('#poems').append(poem);
-                });
-            }
-        });
-    });
-
-    /**
-     * Handles the click event on the title of a poem,
-     * which causes the text of the poem to be loaded
-     */
-    function poemHandler() {
-        const thisPoem = $(this);
-
-        // If the poem text is visible, it removes it
-        if (thisPoem.parent().html().includes('<div>')) {
-            thisPoem.removeClass('openPoem');
-            thisPoem.addClass('closedPoem');
-            thisPoem.parent().find('div').remove();
-        } else {    // If the poem is not visible, it loads it
-            $.ajax({
-                url: API,
-                type: 'GET',
-                data: {
-                    entity: 'poem',
-                    information: 'text',
-                    authorName: $('#cmbPoets > option:selected').text(),
-                    title: $(this).text()
-                },
-                success: function(data) {
-                    const poemText = JSON.parse(data).text;
-                    thisPoem.removeClass('closedPoem');
-                    thisPoem.addClass('openPoem');
-                    thisPoem.parent().append($('<div>', {html: poemText}));
-                }
-            });
-        }
-    }
+    // The first poet is selected automatically
+    cmbPoets.dispatchEvent(new Event('change'));
 });
+
+/**
+ *  Poet selection
+ */
+document.getElementById('cmbPoets').addEventListener('change', function () {
+    const selectedPoet = this.options[this.selectedIndex].text;
+
+    // Load poet information
+    fetch(`${API_BASE_URL}?entity=author&information=info&name=${encodeURIComponent(selectedPoet)}`)
+    .then(response => response.json())
+    .then(info => {
+        let dates = `${info.birthPlace}, ${info.birthDate}`;
+        if (info.deathDate !== undefined) {
+            dates += `- ${info.deathPlace}, ${info.deathDate}`;
+        }
+        document.getElementById('poetInfo').textContent = dates;
+    });
+
+    // Load poet's list of poems
+    fetch(`${API_BASE_URL}?entity=author&information=poems&name=${encodeURIComponent(selectedPoet)}`)
+        .then(response => response.json())
+        .then(data => {
+            const poemsContainer = document.getElementById('poems');
+            poemsContainer.innerHTML = '';
+
+            const container = new DocumentFragment;
+            data.forEach(poemTitle => {
+                const poemArticle = createElement('article');
+                const poemHeader = createElement('h3', { text: poemTitle, class: 'closedPoem' });
+
+                poemHeader.addEventListener('click', poemHandler);
+
+                poemArticle.appendChild(poemHeader);
+                container.appendChild(poemArticle);
+            });
+            poemsContainer.append(container);
+        });
+});
+
+/**
+ * Handles the click event on the title of a poem,
+ * which causes the text of the poem to be loaded
+ */
+function poemHandler() {
+    const poemHeader = this;
+    const poemArticle = poemHeader.parentNode;
+    const selectedPoet = document.getElementById('cmbPoets').options[
+        document.getElementById('cmbPoets').selectedIndex
+    ].text;
+
+    // If the poem text is visible, remove it
+    const poemTextDiv = poemArticle.querySelector('div');
+    if (poemTextDiv) {
+        poemHeader.classList.remove('openPoem');
+        poemHeader.classList.add('closedPoem');
+        poemTextDiv.remove();
+    } else {
+        // If the poem is not visible, load it
+        fetch(
+            `${API_BASE_URL}?entity=poem&information=text&authorName=${encodeURIComponent(selectedPoet)}&title=${encodeURIComponent(poemHeader.textContent)}`
+        )
+        .then(response => response.json())
+        .then(data => {
+            const poemTextDiv = createElement('div', { html: data.text });
+            poemHeader.classList.remove('closedPoem');
+            poemHeader.classList.add('openPoem');
+            poemArticle.appendChild(poemTextDiv);
+        });
+    }
+}

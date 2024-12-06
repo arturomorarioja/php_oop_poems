@@ -1,7 +1,7 @@
 <?php
 
-class Catalog {
-
+class Catalog 
+{
     public function getAuthors(): array
     {
         $authors = scandir(__DIR__ . '/../poems');

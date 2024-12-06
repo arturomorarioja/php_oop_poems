@@ -1,10 +1,11 @@
 <?php
 
-class Poem {
+class Poem 
+{
     private string $author;
     private string $title;
 
-    public function __construct($author, $title)
+    public function __construct(string $author, string $title)
     {
         $this->author = $author;
         $this->title = $title;

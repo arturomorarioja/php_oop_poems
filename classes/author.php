@@ -1,10 +1,11 @@
 <?php
 
-class Author {
+class Author 
+{
     private string $name;
     private string $dir;
 
-    public function __construct($name)
+    public function __construct(string $name)
     {
         $this->name = $name;
         $this->dir = __DIR__ . '/../poems/' . $this->name;
